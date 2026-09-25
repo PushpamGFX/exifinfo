@@ -43,10 +43,10 @@
     <div id="status"></div>
   </div>
 
-  <!-- Image to Apply EXIF Section (Supports PNG, WEBP, JPG, BMP) -->
+  <!-- Image Selection Section (Supports ALL formats via image/*) -->
   <div style="margin-bottom: 20px;">
-    <label style="font-weight: bold;">Target Image Select Karein (JPG, PNG, WEBP, BMP Supported):</label><br>
-    <input type="file" id="imageInput" accept="image/jpeg, image/png, image/webp, image/bmp" style="margin-top: 8px;">
+    <label style="font-weight: bold;">Target Image Select Karein (PNG, JPG, WEBP, BMP All Supported):</label><br>
+    <input type="file" id="imageInput" accept="image/*, .png, .jpg, .jpeg, .webp, .bmp" style="margin-top: 8px;">
     <div id="imgStatus"></div>
   </div>
 
@@ -145,39 +145,35 @@
     });
   }
 
-  // All Image Formats (PNG, WEBP, BMP, JPG) Handler using HTML5 Canvas
+  // Image Loader (PNG, JPG, WEBP, BMP) via HTML5 Canvas
   document.getElementById('imageInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const imgStatus = document.getElementById("imgStatus");
     if (!file) return;
 
     imgStatus.style.color = "#007bff";
-    imgStatus.innerText = "Processing image format...";
+    imgStatus.innerText = "Processing image...";
 
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
-        // Render to HTML5 Canvas to convert any image format into standard JPEG Base64
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
         
-        // Fill white background for transparent PNGs
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
 
-        // Auto fill actual width & height in form fields
         document.getElementById("PixelXDimension").value = img.width;
         document.getElementById("PixelYDimension").value = img.height;
 
-        // Convert canvas image to JPEG format with 95% quality
         imageBase64 = canvas.toDataURL('image/jpeg', 0.95);
         
         imgStatus.style.color = "#28a745";
-        imgStatus.innerText = `✓ Image Ready (${file.type.toUpperCase() || 'IMAGE'} -> JPEG, ${img.width}x${img.height}px)`;
+        imgStatus.innerText = `✓ Image Ready (${file.name} - ${img.width}x${img.height}px)`;
       };
       img.src = e.target.result;
     };
@@ -216,7 +212,7 @@
 
   function processAndDownload() {
     if (!imageBase64) {
-      alert("Kripya koi target image select karein!");
+      alert("Kripya koi image select karein!");
       return;
     }
 
