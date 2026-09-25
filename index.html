@@ -2,27 +2,48 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <title>Exact EXIF Metadata Editor</title>
+  <title>Auto EXIF Metadata AI Extractor & Editor</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
     .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     h2 { margin-top: 0; color: #111; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .section { background: #eef5ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #cce0ff; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin-top: 15px; }
     .field { display: flex; flex-direction: column; }
     label { font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #555; }
     input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-    button { margin-top: 25px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; }
+    button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; }
     button:hover { background: #0056b3; }
+    .btn-ai { background: #28a745; margin-top: 10px; }
+    .btn-ai:hover { background: #218838; }
+    #status { margin-top: 10px; font-weight: bold; color: #d9534f; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Image EXIF Metadata Editor</h2>
-  <label style="font-size: 14px; font-weight: bold;">Select Image (JPG/JPEG):</label><br>
-  <input type="file" id="imageInput" accept="image/jpeg" style="margin-top: 8px;">
+  <h2>Auto EXIF Metadata Editor (AI Powered)</h2>
 
+  <!-- API Key & Screenshot Upload Section -->
+  <div class="section">
+    <label style="font-size: 13px;">Gemini API Key (Google AI Studio se praapt karein):</label>
+    <input type="password" id="apiKey" value="AQ.Ab8RN6LqnLaW9h0gFijR3aUyd14rSQGe1Y-587O-DTbmdYOwiQ" placeholder="Enter Gemini API Key here" style="width: 100%; margin: 6px 0 12px 0; box-sizing: border-box;">
+    
+    <label style="font-size: 13px;">Metadata Screenshot (AI analysis ke liye):</label><br>
+    <input type="file" id="screenshotInput" accept="image/*" style="margin-top: 6px;"><br>
+    
+    <button class="btn-ai" onclick="analyzeScreenshotWithGemini()">AI Se Screenshot Analyze & Auto-Fill Karein</button>
+    <div id="status"></div>
+  </div>
+
+  <!-- Image to Apply EXIF Section -->
+  <div style="margin-bottom: 20px;">
+    <label style="font-weight: bold;">Target Image Select Karein (Jisme Metadata Add Karna Hai - JPG/JPEG):</label><br>
+    <input type="file" id="imageInput" accept="image/jpeg" style="margin-top: 8px;">
+  </div>
+
+  <h3>Extracted / Editable Metadata Fields</h3>
   <div class="grid">
     <div class="field"><label>Camera model</label><input type="text" id="Model" value="SM-A225F"></div>
     <div class="field"><label>Camera manufacturer</label><input type="text" id="Make" value="samsung"></div>
@@ -61,7 +82,7 @@
     <div class="field"><label>Light source (0=Unknown)</label><input type="number" id="LightSource" value="0"></div>
   </div>
 
-  <button onclick="processAndDownload()">Update Metadata & Download Image</button>
+  <button style="width: 100%; margin-top: 25px;" onclick="processAndDownload()">Update Metadata & Download Image</button>
 </div>
 
 <script>
@@ -77,9 +98,124 @@
     reader.readAsDataURL(file);
   });
 
+  async function analyzeScreenshotWithGemini() {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const screenshotFile = document.getElementById("screenshotInput").files[0];
+    const statusDiv = document.getElementById("status");
+
+    if (!apiKey) {
+      alert("Kripya Gemini API Key darj karein!");
+      return;
+    }
+    if (!screenshotFile) {
+      alert("Kripya metadata screenshot image select karein!");
+      return;
+    }
+
+    statusDiv.style.color = "#007bff";
+    statusDiv.innerText = "Gemini AI screenshot analyze kar raha hai... Kripya prateeksha karein.";
+
+    const base64Data = await fileToBase64(screenshotFile);
+    const pureBase64 = base64Data.split(',')[1];
+
+    const promptText = `Analyze the attached image showing camera metadata. Extract the exact values for all the following 35 fields visible in the image:
+1. Camera model
+2. Camera manufacturer
+3. Date and time of data generation
+4. Exposure time
+5. F-number
+6. ISO speed rating
+7. Lens focal length
+8. Vertical resolution
+9. Horizontal resolution
+10. Width
+11. Height
+12. Software used
+13. Y and C positioning
+14. Orientation
+15. File change date and time
+16. APEX aperture
+17. Exif version
+18. APEX exposure bias
+19. Exposure Program
+20. Color space
+21. Maximum land aperture
+22. APEX brightness
+23. DateTimeOriginal subseconds
+24. White balance
+25. Exposure mode
+26. Flash
+27. DateTime subseconds
+28. Focal length in 35 mm film
+29. DateTimeDigitized subseconds
+30. Digital zoom ratio
+31. Date and time of digitizing
+32. APEX shutter speed
+33. Metering mode
+34. Scene capture type
+35. Light source
+
+Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) mapping HTML IDs:
+{"Model":"","Make":"","DateTimeOriginal":"","ExposureTime":"","FNumber":"","ISOSpeedRatings":"","FocalLength":"","YResolution":"","XResolution":"","PixelXDimension":"","PixelYDimension":"","Software":"","YCbCrPositioning":"","Orientation":"","DateTime":"","ApertureValue":"","ExifVersion":"","ExposureBiasValue":"","ExposureProgram":"","ColorSpace":"","MaxApertureValue":"","BrightnessValue":"","SubSecTimeOriginal":"","WhiteBalance":"","ExposureMode":"","Flash":"","SubSecTime":"","FocalLengthIn35mmFilm":"","SubSecTimeDigitized":"","DigitalZoomRatio":"","DateTimeDigitized":"","ShutterSpeedValue":"","MeteringMode":"","SceneCaptureType":"","LightSource":""}`;
+
+    const requestBody = {
+      contents: [{
+        parts: [
+          { text: promptText },
+          { inline_data: { mime_type: screenshotFile.type, data: pureBase64 } }
+        ]
+      }]
+    };
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data = await response.json();
+      
+      if (!data.candidates || !data.candidates[0]) {
+        throw new Error(data.error ? data.error.message : "API Response Error");
+      }
+
+      let responseText = data.candidates[0].content.parts[0].text;
+      
+      // Clean json string if backticks returned
+      responseText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const metadataJSON = JSON.parse(responseText);
+
+      // Auto Fill Form
+      for (const [key, value] of Object.entries(metadataJSON)) {
+        const inputElem = document.getElementById(key);
+        if (inputElem && value !== undefined && value !== null) {
+          inputElem.value = value;
+        }
+      }
+
+      statusDiv.style.color = "#28a745";
+      statusDiv.innerText = "Saphaltapoorvak AI dwara sabhi values extract aur form me autofill kar di gayi hain!";
+
+    } catch (err) {
+      console.error(err);
+      statusDiv.style.color = "#d9534f";
+      statusDiv.innerText = "Error: Screenshot analyze karne me viphal. Kripya API key aur image jaanchlein.";
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
   function processAndDownload() {
     if (!imageBase64) {
-      alert("Kripya pehle JPEG image select karein!");
+      alert("Kripya pehle JPEG target image select karein!");
       return;
     }
 
@@ -94,10 +230,10 @@
     exifObj["0th"][piexif.ImageIFD.Model] = document.getElementById("Model").value;
     exifObj["0th"][piexif.ImageIFD.Software] = document.getElementById("Software").value;
     exifObj["0th"][piexif.ImageIFD.DateTime] = document.getElementById("DateTime").value;
-    exifObj["0th"][piexif.ImageIFD.Orientation] = parseInt(document.getElementById("Orientation").value);
-    exifObj["0th"][piexif.ImageIFD.YCbCrPositioning] = parseInt(document.getElementById("YCbCrPositioning").value);
-    exifObj["0th"][piexif.ImageIFD.XResolution] = [parseInt(document.getElementById("XResolution").value), 1];
-    exifObj["0th"][piexif.ImageIFD.YResolution] = [parseInt(document.getElementById("YResolution").value), 1];
+    exifObj["0th"][piexif.ImageIFD.Orientation] = parseInt(document.getElementById("Orientation").value) || 1;
+    exifObj["0th"][piexif.ImageIFD.YCbCrPositioning] = parseInt(document.getElementById("YCbCrPositioning").value) || 1;
+    exifObj["0th"][piexif.ImageIFD.XResolution] = [parseInt(document.getElementById("XResolution").value) || 72, 1];
+    exifObj["0th"][piexif.ImageIFD.YResolution] = [parseInt(document.getElementById("YResolution").value) || 72, 1];
 
     // EXIF IFD Tags
     const dtOrig = document.getElementById("DateTimeOriginal").value;
@@ -124,37 +260,37 @@
     const expTime = parseFloat(document.getElementById("ExposureTime").value) || 0.0303;
     exifObj["Exif"][piexif.ExifIFD.ExposureTime] = [Math.round(expTime * 10000), 10000];
 
-    exifObj["Exif"][piexif.ExifIFD.ISOSpeedRatings] = parseInt(document.getElementById("ISOSpeedRatings").value);
+    exifObj["Exif"][piexif.ExifIFD.ISOSpeedRatings] = parseInt(document.getElementById("ISOSpeedRatings").value) || 250;
 
     const focal = parseFloat(document.getElementById("FocalLength").value) || 4.65;
     exifObj["Exif"][piexif.ExifIFD.FocalLength] = [Math.round(focal * 100), 100];
 
-    exifObj["Exif"][piexif.ExifIFD.PixelXDimension] = parseInt(document.getElementById("PixelXDimension").value);
-    exifObj["Exif"][piexif.ExifIFD.PixelYDimension] = parseInt(document.getElementById("PixelYDimension").value);
-    exifObj["Exif"][piexif.ExifIFD.ColorSpace] = parseInt(document.getElementById("ColorSpace").value);
+    exifObj["Exif"][piexif.ExifIFD.PixelXDimension] = parseInt(document.getElementById("PixelXDimension").value) || 4000;
+    exifObj["Exif"][piexif.ExifIFD.PixelYDimension] = parseInt(document.getElementById("PixelYDimension").value) || 1800;
+    exifObj["Exif"][piexif.ExifIFD.ColorSpace] = parseInt(document.getElementById("ColorSpace").value) || 1;
 
-    exifObj["Exif"][piexif.ExifIFD.ExposureProgram] = parseInt(document.getElementById("ExposureProgram").value);
-    exifObj["Exif"][piexif.ExifIFD.ExposureBiasValue] = [parseInt(document.getElementById("ExposureBiasValue").value), 1];
-    exifObj["Exif"][piexif.ExifIFD.ExposureMode] = parseInt(document.getElementById("ExposureMode").value);
-    exifObj["Exif"][piexif.ExifIFD.WhiteBalance] = parseInt(document.getElementById("WhiteBalance").value);
-    exifObj["Exif"][piexif.ExifIFD.Flash] = parseInt(document.getElementById("Flash").value);
-    exifObj["Exif"][piexif.ExifIFD.MeteringMode] = parseInt(document.getElementById("MeteringMode").value);
-    exifObj["Exif"][piexif.ExifIFD.SceneCaptureType] = parseInt(document.getElementById("SceneCaptureType").value);
-    exifObj["Exif"][piexif.ExifIFD.LightSource] = parseInt(document.getElementById("LightSource").value);
-    exifObj["Exif"][piexif.ExifIFD.FocalLengthIn35mmFilm] = parseInt(document.getElementById("FocalLengthIn35mmFilm").value);
-    exifObj["Exif"][piexif.ExifIFD.DigitalZoomRatio] = [parseInt(document.getElementById("DigitalZoomRatio").value), 1];
+    exifObj["Exif"][piexif.ExifIFD.ExposureProgram] = parseInt(document.getElementById("ExposureProgram").value) || 2;
+    exifObj["Exif"][piexif.ExifIFD.ExposureBiasValue] = [parseInt(document.getElementById("ExposureBiasValue").value) || 0, 1];
+    exifObj["Exif"][piexif.ExifIFD.ExposureMode] = parseInt(document.getElementById("ExposureMode").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.WhiteBalance] = parseInt(document.getElementById("WhiteBalance").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.Flash] = parseInt(document.getElementById("Flash").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.MeteringMode] = parseInt(document.getElementById("MeteringMode").value) || 2;
+    exifObj["Exif"][piexif.ExifIFD.SceneCaptureType] = parseInt(document.getElementById("SceneCaptureType").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.LightSource] = parseInt(document.getElementById("LightSource").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.FocalLengthIn35mmFilm] = parseInt(document.getElementById("FocalLengthIn35mmFilm").value) || 0;
+    exifObj["Exif"][piexif.ExifIFD.DigitalZoomRatio] = [parseInt(document.getElementById("DigitalZoomRatio").value) || 1, 1];
 
     exifObj["Exif"][piexif.ExifIFD.SubSecTime] = document.getElementById("SubSecTime").value;
     exifObj["Exif"][piexif.ExifIFD.SubSecTimeOriginal] = document.getElementById("SubSecTimeOriginal").value;
     exifObj["Exif"][piexif.ExifIFD.SubSecTimeDigitized] = document.getElementById("SubSecTimeDigitized").value;
 
-    // Save and download without tool signature
+    // Save & Download Without Watermark
     const exifBytes = piexif.dump(exifObj);
     const newImageBase64 = piexif.insert(exifBytes, imageBase64);
 
     const a = document.createElement("a");
     a.href = newImageBase64;
-    a.download = "output_image.jpg";
+    a.download = "updated_exif_image.jpg";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
