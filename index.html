@@ -18,7 +18,10 @@
     button:hover { background: #0056b3; }
     .btn-fill { background: #28a745; margin-top: 10px; }
     .btn-fill:hover { background: #218838; }
+    .btn-copy { background: #17a2b8; margin-bottom: 12px; font-size: 13px; padding: 8px 16px; }
+    .btn-copy:hover { background: #138496; }
     #status { margin-top: 10px; font-weight: bold; font-size: 13px; }
+    #copyStatus { display: inline-block; margin-left: 10px; font-size: 13px; font-weight: bold; color: #28a745; }
   </style>
 </head>
 <body>
@@ -26,12 +29,16 @@
 <div class="container">
   <h2>Auto EXIF Metadata Editor</h2>
 
-  <!-- Paste AI Output / Text Section -->
+  <!-- Prompt & Paste AI Output Section -->
   <div class="section">
-    <label style="font-size: 13px; font-weight: bold;">AI (Gemini/ChatGPT) ka JSON / Extracted Data Yahan Paste Karein:</label><br>
-    <textarea id="aiTextInput" placeholder='{"Model": "SM-A225F", "Make": "samsung", "DateTimeOriginal": "2026:07:22 18:47:00", ...}'></textarea>
+    <button class="btn-copy" onclick="copyAIPrompt()">📋 Step 1: Copy AI Prompt</button>
+    <span id="copyStatus"></span>
+    <br>
     
-    <button class="btn-fill" onclick="autoFillFromText()">Auto-Fill Metadata Fields</button>
+    <label style="font-size: 13px; font-weight: bold;">Step 2: Gemini/ChatGPT se milaa JSON Data Yahan Paste Karein:</label><br>
+    <textarea id="aiTextInput" style="margin-top: 6px;" placeholder='{"Model": "SM-A225F", "Make": "samsung", "DateTimeOriginal": "2026:07:22 18:47:00", ...}'></textarea>
+    
+    <button class="btn-fill" onclick="autoFillFromText()">Step 3: Auto-Fill Metadata Fields</button>
     <div id="status"></div>
   </div>
 
@@ -86,6 +93,56 @@
 <script>
   let imageBase64 = "";
 
+  const aiPromptText = `Analyze the attached camera metadata screenshot/image. Extract values for these exact 34 keys and return ONLY a valid JSON object without markdown formatting or extra text. Format date fields as "YYYY:MM:DD HH:MM:SS".
+
+{
+  "Model": "",
+  "Make": "",
+  "DateTimeOriginal": "",
+  "ExposureTime": "",
+  "FNumber": "",
+  "ISOSpeedRatings": "",
+  "FocalLength": "",
+  "YResolution": "",
+  "XResolution": "",
+  "PixelXDimension": "",
+  "PixelYDimension": "",
+  "Software": "",
+  "YCbCrPositioning": "",
+  "Orientation": "",
+  "DateTime": "",
+  "ApertureValue": "",
+  "ExifVersion": "0220",
+  "ExposureBiasValue": "",
+  "ExposureProgram": "",
+  "ColorSpace": "",
+  "MaxApertureValue": "",
+  "BrightnessValue": "",
+  "SubSecTimeOriginal": "",
+  "WhiteBalance": "",
+  "ExposureMode": "",
+  "Flash": "",
+  "SubSecTime": "",
+  "FocalLengthIn35mmFilm": "",
+  "SubSecTimeDigitized": "",
+  "DigitalZoomRatio": "",
+  "DateTimeDigitized": "",
+  "ShutterSpeedValue": "",
+  "MeteringMode": "",
+  "SceneCaptureType": "",
+  "LightSource": ""
+}`;
+
+  function copyAIPrompt() {
+    navigator.clipboard.writeText(aiPromptText).then(() => {
+      const copyStatus = document.getElementById("copyStatus");
+      copyStatus.innerText = "✓ Prompt Copied!";
+      setTimeout(() => { copyStatus.innerText = ""; }, 3000);
+    }).catch(err => {
+      alert("Prompt copy nahi ho paya. Error: " + err);
+    });
+  }
+
   document.getElementById('imageInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -104,7 +161,6 @@
     }
 
     try {
-      // Clean up json if user pasted markdown formatting
       let cleanText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
       const metadataObj = JSON.parse(cleanText);
 
@@ -121,7 +177,7 @@
       statusDiv.innerText = `Success! ${count} metadata fields auto-fill ho gayi hain.`;
     } catch (err) {
       statusDiv.style.color = "#d9534f";
-      statusDiv.innerText = "Invalid JSON Format! Kripya sahi format paste karein.";
+      statusDiv.innerText = "Invalid JSON Format! Kripya sahi JSON paste karein.";
     }
   }
 
