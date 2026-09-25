@@ -17,7 +17,7 @@
     button:hover { background: #0056b3; }
     .btn-ai { background: #28a745; margin-top: 10px; }
     .btn-ai:hover { background: #218838; }
-    #status { margin-top: 10px; font-weight: bold; color: #d9534f; }
+    #status { margin-top: 10px; font-weight: bold; font-size: 13px; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -27,8 +27,8 @@
 
   <!-- API Key & Screenshot Upload Section -->
   <div class="section">
-    <label style="font-size: 13px;">Gemini API Key (Google AI Studio se praapt karein):</label>
-    <input type="password" id="apiKey" value="AQ.Ab8RN6LqnLaW9h0gFijR3aUyd14rSQGe1Y-587O-DTbmdYOwiQ" placeholder="Enter Gemini API Key here" style="width: 100%; margin: 6px 0 12px 0; box-sizing: border-box;">
+    <label style="font-size: 13px;">Gemini API Key (Google AI Studio se):</label>
+    <input type="password" id="apiKey" placeholder="AIzaSy..." style="width: 100%; margin: 6px 0 12px 0; box-sizing: border-box;">
     
     <label style="font-size: 13px;">Metadata Screenshot (AI analysis ke liye):</label><br>
     <input type="file" id="screenshotInput" accept="image/*" style="margin-top: 6px;"><br>
@@ -88,13 +88,17 @@
 <script>
   let imageBase64 = "";
 
+  // Saved API key load on startup
+  window.addEventListener("DOMContentLoaded", () => {
+    const savedKey = localStorage.getItem("gemini_key");
+    if(savedKey) document.getElementById("apiKey").value = savedKey;
+  });
+
   document.getElementById('imageInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
-      imageBase64 = e.target.result;
-    };
+    reader.onload = function(e) { imageBase64 = e.target.result; };
     reader.readAsDataURL(file);
   });
 
@@ -104,7 +108,7 @@
     const statusDiv = document.getElementById("status");
 
     if (!apiKey) {
-      alert("Kripya Gemini API Key darj karein!");
+      alert("Kripya valid Gemini API Key enter karein!");
       return;
     }
     if (!screenshotFile) {
@@ -112,50 +116,16 @@
       return;
     }
 
+    // Save key locally
+    localStorage.setItem("gemini_key", apiKey);
+
     statusDiv.style.color = "#007bff";
-    statusDiv.innerText = "Gemini AI screenshot analyze kar raha hai... Kripya prateeksha karein.";
+    statusDiv.innerText = "Gemini AI screenshot analyze kar raha hai...";
 
     const base64Data = await fileToBase64(screenshotFile);
     const pureBase64 = base64Data.split(',')[1];
 
-    const promptText = `Analyze the attached image showing camera metadata. Extract the exact values for all the following 35 fields visible in the image:
-1. Camera model
-2. Camera manufacturer
-3. Date and time of data generation
-4. Exposure time
-5. F-number
-6. ISO speed rating
-7. Lens focal length
-8. Vertical resolution
-9. Horizontal resolution
-10. Width
-11. Height
-12. Software used
-13. Y and C positioning
-14. Orientation
-15. File change date and time
-16. APEX aperture
-17. Exif version
-18. APEX exposure bias
-19. Exposure Program
-20. Color space
-21. Maximum land aperture
-22. APEX brightness
-23. DateTimeOriginal subseconds
-24. White balance
-25. Exposure mode
-26. Flash
-27. DateTime subseconds
-28. Focal length in 35 mm film
-29. DateTimeDigitized subseconds
-30. Digital zoom ratio
-31. Date and time of digitizing
-32. APEX shutter speed
-33. Metering mode
-34. Scene capture type
-35. Light source
-
-Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) mapping HTML IDs:
+    const promptText = `Analyze the attached camera metadata screenshot. Extract values for these exact keys and return ONLY a valid JSON object without markdown syntax:
 {"Model":"","Make":"","DateTimeOriginal":"","ExposureTime":"","FNumber":"","ISOSpeedRatings":"","FocalLength":"","YResolution":"","XResolution":"","PixelXDimension":"","PixelYDimension":"","Software":"","YCbCrPositioning":"","Orientation":"","DateTime":"","ApertureValue":"","ExifVersion":"","ExposureBiasValue":"","ExposureProgram":"","ColorSpace":"","MaxApertureValue":"","BrightnessValue":"","SubSecTimeOriginal":"","WhiteBalance":"","ExposureMode":"","Flash":"","SubSecTime":"","FocalLengthIn35mmFilm":"","SubSecTimeDigitized":"","DigitalZoomRatio":"","DateTimeDigitized":"","ShutterSpeedValue":"","MeteringMode":"","SceneCaptureType":"","LightSource":""}`;
 
     const requestBody = {
@@ -168,39 +138,40 @@ Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) map
     };
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      // Updated to gemini-1.5-flash for stable client-side API requests
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
-      
-      if (!data.candidates || !data.candidates[0]) {
-        throw new Error(data.error ? data.error.message : "API Response Error");
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "API Request Failed");
       }
 
       let responseText = data.candidates[0].content.parts[0].text;
       
-      // Clean json string if backticks returned
+      // Clean json string
       responseText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
       const metadataJSON = JSON.parse(responseText);
 
       // Auto Fill Form
       for (const [key, value] of Object.entries(metadataJSON)) {
         const inputElem = document.getElementById(key);
-        if (inputElem && value !== undefined && value !== null) {
+        if (inputElem && value !== undefined && value !== null && value !== "") {
           inputElem.value = value;
         }
       }
 
       statusDiv.style.color = "#28a745";
-      statusDiv.innerText = "Saphaltapoorvak AI dwara sabhi values extract aur form me autofill kar di gayi hain!";
+      statusDiv.innerText = "Success! Metadata autofilled successfully.";
 
     } catch (err) {
       console.error(err);
       statusDiv.style.color = "#d9534f";
-      statusDiv.innerText = "Error: Screenshot analyze karne me viphal. Kripya API key aur image jaanchlein.";
+      statusDiv.innerText = "Error: " + err.message;
     }
   }
 
@@ -215,15 +186,13 @@ Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) map
 
   function processAndDownload() {
     if (!imageBase64) {
-      alert("Kripya pehle JPEG target image select karein!");
+      alert("Kripya target JPEG image select karein!");
       return;
     }
 
     let exifObj = { "0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": null };
 
-    try {
-      exifObj = piexif.load(imageBase64);
-    } catch(e) {}
+    try { exifObj = piexif.load(imageBase64); } catch(e) {}
 
     // 0th IFD Tags
     exifObj["0th"][piexif.ImageIFD.Make] = document.getElementById("Make").value;
@@ -236,10 +205,8 @@ Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) map
     exifObj["0th"][piexif.ImageIFD.YResolution] = [parseInt(document.getElementById("YResolution").value) || 72, 1];
 
     // EXIF IFD Tags
-    const dtOrig = document.getElementById("DateTimeOriginal").value;
-    const dtDigi = document.getElementById("DateTimeDigitized").value;
-    exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal] = dtOrig;
-    exifObj["Exif"][piexif.ExifIFD.DateTimeDigitized] = dtDigi;
+    exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal] = document.getElementById("DateTimeOriginal").value;
+    exifObj["Exif"][piexif.ExifIFD.DateTimeDigitized] = document.getElementById("DateTimeDigitized").value;
     exifObj["Exif"][piexif.ExifIFD.ExifVersion] = "0220";
 
     const fnum = parseFloat(document.getElementById("FNumber").value) || 1.8;
@@ -284,7 +251,6 @@ Return ONLY a valid raw JSON object (no markdown formatting, no code blocks) map
     exifObj["Exif"][piexif.ExifIFD.SubSecTimeOriginal] = document.getElementById("SubSecTimeOriginal").value;
     exifObj["Exif"][piexif.ExifIFD.SubSecTimeDigitized] = document.getElementById("SubSecTimeDigitized").value;
 
-    // Save & Download Without Watermark
     const exifBytes = piexif.dump(exifObj);
     const newImageBase64 = piexif.insert(exifBytes, imageBase64);
 
