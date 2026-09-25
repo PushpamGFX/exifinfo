@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <title>Exact EXIF Metadata Editor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #111; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin-top: 15px; }
+    .field { display: flex; flex-direction: column; }
+    label { font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #555; }
+    input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    button { margin-top: 25px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Image EXIF Metadata Editor</h2>
+  <label style="font-size: 14px; font-weight: bold;">Select Image (JPG/JPEG):</label><br>
+  <input type="file" id="imageInput" accept="image/jpeg" style="margin-top: 8px;">
+
+  <div class="grid">
+    <div class="field"><label>Camera model</label><input type="text" id="Model" value="SM-A225F"></div>
+    <div class="field"><label>Camera manufacturer</label><input type="text" id="Make" value="samsung"></div>
+    <div class="field"><label>Date and time of data generation</label><input type="text" id="DateTimeOriginal" value="2026:07:22 18:47:00"></div>
+    <div class="field"><label>Exposure time (sec)</label><input type="text" id="ExposureTime" value="0.0303"></div>
+    <div class="field"><label>F-number</label><input type="text" id="FNumber" value="1.8"></div>
+    <div class="field"><label>ISO speed rating</label><input type="number" id="ISOSpeedRatings" value="250"></div>
+    <div class="field"><label>Lens focal length (mm)</label><input type="text" id="FocalLength" value="4.65"></div>
+    <div class="field"><label>Vertical resolution (dpi)</label><input type="number" id="YResolution" value="72"></div>
+    <div class="field"><label>Horizontal resolution (dpi)</label><input type="number" id="XResolution" value="72"></div>
+    <div class="field"><label>Width (px)</label><input type="number" id="PixelXDimension" value="4000"></div>
+    <div class="field"><label>Height (px)</label><input type="number" id="PixelYDimension" value="1800"></div>
+    <div class="field"><label>Software used</label><input type="text" id="Software" value="A225FXXSBDYE2"></div>
+    <div class="field"><label>Y and C positioning (1=Centered, 2=Co-sited)</label><input type="number" id="YCbCrPositioning" value="1"></div>
+    <div class="field"><label>Orientation (1=Normal)</label><input type="number" id="Orientation" value="1"></div>
+    <div class="field"><label>File change date and time</label><input type="text" id="DateTime" value="2026:07:22 18:47:00"></div>
+    <div class="field"><label>APEX aperture</label><input type="text" id="ApertureValue" value="1.69"></div>
+    <div class="field"><label>Exif version</label><input type="text" id="ExifVersion" value="0220"></div>
+    <div class="field"><label>APEX exposure bias</label><input type="number" id="ExposureBiasValue" value="0"></div>
+    <div class="field"><label>Exposure Program (0=Normal program)</label><input type="number" id="ExposureProgram" value="2"></div>
+    <div class="field"><label>Color space (1=sRGB)</label><input type="number" id="ColorSpace" value="1"></div>
+    <div class="field"><label>Maximum land aperture</label><input type="text" id="MaxApertureValue" value="1.69"></div>
+    <div class="field"><label>APEX brightness</label><input type="text" id="BrightnessValue" value="2.79"></div>
+    <div class="field"><label>DateTimeOriginal subseconds</label><input type="text" id="SubSecTimeOriginal" value="068"></div>
+    <div class="field"><label>White balance (0=Auto white balance)</label><input type="number" id="WhiteBalance" value="0"></div>
+    <div class="field"><label>Exposure mode (0=Auto exposure)</label><input type="number" id="ExposureMode" value="0"></div>
+    <div class="field"><label>Flash (0=Flash did not fire)</label><input type="number" id="Flash" value="0"></div>
+    <div class="field"><label>Date subseconds</label><input type="text" id="SubSecTime" value="068"></div>
+    <div class="field"><label>Focal length in 35 mm film</label><input type="number" id="FocalLengthIn35mmFilm" value="0"></div>
+    <div class="field"><label>DateDigitized subseconds</label><input type="text" id="SubSecTimeDigitized" value="068"></div>
+    <div class="field"><label>Digital zoom ratio</label><input type="number" id="DigitalZoomRatio" value="1"></div>
+    <div class="field"><label>Date and time of digitizing</label><input type="text" id="DateTimeDigitized" value="2026:07:22 18:47:00"></div>
+    <div class="field"><label>APEX shutter speed</label><input type="text" id="ShutterSpeedValue" value="0.0303"></div>
+    <div class="field"><label>Metering mode (2=Center weighted average)</label><input type="number" id="MeteringMode" value="2"></div>
+    <div class="field"><label>Scene capture type (0=Standard)</label><input type="number" id="SceneCaptureType" value="0"></div>
+    <div class="field"><label>Light source (0=Unknown)</label><input type="number" id="LightSource" value="0"></div>
+  </div>
+
+  <button onclick="processAndDownload()">Update Metadata & Download Image</button>
+</div>
+
+<script>
+  let imageBase64 = "";
+
+  document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imageBase64 = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function processAndDownload() {
+    if (!imageBase64) {
+      alert("Kripya pehle JPEG image select karein!");
+      return;
+    }
+
+    let exifObj = { "0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": null };
+
+    try {
+      exifObj = piexif.load(imageBase64);
+    } catch(e) {}
+
+    // 0th IFD Tags
+    exifObj["0th"][piexif.ImageIFD.Make] = document.getElementById("Make").value;
+    exifObj["0th"][piexif.ImageIFD.Model] = document.getElementById("Model").value;
+    exifObj["0th"][piexif.ImageIFD.Software] = document.getElementById("Software").value;
+    exifObj["0th"][piexif.ImageIFD.DateTime] = document.getElementById("DateTime").value;
+    exifObj["0th"][piexif.ImageIFD.Orientation] = parseInt(document.getElementById("Orientation").value);
+    exifObj["0th"][piexif.ImageIFD.YCbCrPositioning] = parseInt(document.getElementById("YCbCrPositioning").value);
+    exifObj["0th"][piexif.ImageIFD.XResolution] = [parseInt(document.getElementById("XResolution").value), 1];
+    exifObj["0th"][piexif.ImageIFD.YResolution] = [parseInt(document.getElementById("YResolution").value), 1];
+
+    // EXIF IFD Tags
+    const dtOrig = document.getElementById("DateTimeOriginal").value;
+    const dtDigi = document.getElementById("DateTimeDigitized").value;
+    exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal] = dtOrig;
+    exifObj["Exif"][piexif.ExifIFD.DateTimeDigitized] = dtDigi;
+    exifObj["Exif"][piexif.ExifIFD.ExifVersion] = "0220";
+
+    const fnum = parseFloat(document.getElementById("FNumber").value) || 1.8;
+    exifObj["Exif"][piexif.ExifIFD.FNumber] = [Math.round(fnum * 100), 100];
+
+    const maxAperture = parseFloat(document.getElementById("MaxApertureValue").value) || 1.69;
+    exifObj["Exif"][piexif.ExifIFD.MaxApertureValue] = [Math.round(maxAperture * 100), 100];
+
+    const apertureVal = parseFloat(document.getElementById("ApertureValue").value) || 1.69;
+    exifObj["Exif"][piexif.ExifIFD.ApertureValue] = [Math.round(apertureVal * 100), 100];
+
+    const brightness = parseFloat(document.getElementById("BrightnessValue").value) || 2.79;
+    exifObj["Exif"][piexif.ExifIFD.BrightnessValue] = [Math.round(brightness * 100), 100];
+
+    const shutter = parseFloat(document.getElementById("ShutterSpeedValue").value) || 0.0303;
+    exifObj["Exif"][piexif.ExifIFD.ShutterSpeedValue] = [Math.round(shutter * 10000), 10000];
+
+    const expTime = parseFloat(document.getElementById("ExposureTime").value) || 0.0303;
+    exifObj["Exif"][piexif.ExifIFD.ExposureTime] = [Math.round(expTime * 10000), 10000];
+
+    exifObj["Exif"][piexif.ExifIFD.ISOSpeedRatings] = parseInt(document.getElementById("ISOSpeedRatings").value);
+
+    const focal = parseFloat(document.getElementById("FocalLength").value) || 4.65;
+    exifObj["Exif"][piexif.ExifIFD.FocalLength] = [Math.round(focal * 100), 100];
+
+    exifObj["Exif"][piexif.ExifIFD.PixelXDimension] = parseInt(document.getElementById("PixelXDimension").value);
+    exifObj["Exif"][piexif.ExifIFD.PixelYDimension] = parseInt(document.getElementById("PixelYDimension").value);
+    exifObj["Exif"][piexif.ExifIFD.ColorSpace] = parseInt(document.getElementById("ColorSpace").value);
+
+    exifObj["Exif"][piexif.ExifIFD.ExposureProgram] = parseInt(document.getElementById("ExposureProgram").value);
+    exifObj["Exif"][piexif.ExifIFD.ExposureBiasValue] = [parseInt(document.getElementById("ExposureBiasValue").value), 1];
+    exifObj["Exif"][piexif.ExifIFD.ExposureMode] = parseInt(document.getElementById("ExposureMode").value);
+    exifObj["Exif"][piexif.ExifIFD.WhiteBalance] = parseInt(document.getElementById("WhiteBalance").value);
+    exifObj["Exif"][piexif.ExifIFD.Flash] = parseInt(document.getElementById("Flash").value);
+    exifObj["Exif"][piexif.ExifIFD.MeteringMode] = parseInt(document.getElementById("MeteringMode").value);
+    exifObj["Exif"][piexif.ExifIFD.SceneCaptureType] = parseInt(document.getElementById("SceneCaptureType").value);
+    exifObj["Exif"][piexif.ExifIFD.LightSource] = parseInt(document.getElementById("LightSource").value);
+    exifObj["Exif"][piexif.ExifIFD.FocalLengthIn35mmFilm] = parseInt(document.getElementById("FocalLengthIn35mmFilm").value);
+    exifObj["Exif"][piexif.ExifIFD.DigitalZoomRatio] = [parseInt(document.getElementById("DigitalZoomRatio").value), 1];
+
+    exifObj["Exif"][piexif.ExifIFD.SubSecTime] = document.getElementById("SubSecTime").value;
+    exifObj["Exif"][piexif.ExifIFD.SubSecTimeOriginal] = document.getElementById("SubSecTimeOriginal").value;
+    exifObj["Exif"][piexif.ExifIFD.SubSecTimeDigitized] = document.getElementById("SubSecTimeDigitized").value;
+
+    // Save and download without tool signature
+    const exifBytes = piexif.dump(exifObj);
+    const newImageBase64 = piexif.insert(exifBytes, imageBase64);
+
+    const a = document.createElement("a");
+    a.href = newImageBase64;
+    a.download = "output_image.jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+</script>
+
+</body>
+</html>
